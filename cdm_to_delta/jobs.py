@@ -66,16 +66,15 @@ class CdmPartitionIncrementalCopyJob(object):
         """
         entity_names = [e.name for e in entities]
 
-        # Create the log table if not exists.
-        try:
-            partition_blob_log_df = self.spark.table(self.partition_blob_log_table_name)
-        except:
+        if not self.spark.catalog.tableExists(self.partition_blob_log_table_name):
             print(
                 f"CdmPartitionIncrementalCopyJob - {self.partition_blob_log_table_name} does not exist. "
                 f"Creating it..."
             )
             partition_blob_log_df = self.spark.createDataFrame([], self.log_table_schema)
             partition_blob_log_df.write.saveAsTable(self.partition_blob_log_table_name)
+
+        partition_blob_log_df = self.spark.table(self.partition_blob_log_table_name)
 
         print(
             f"CdmPartitionIncrementalCopyJob - Reading latest blob state from "
@@ -508,14 +507,14 @@ class CdmBatchIngestionJob(object):
 
         if self.MODE_FULL != mode:
             # Read blobs already processed
-            try:
-                log_table_df = self.spark.table(self.full_log_table_name)
-            except:
+            if not self.spark.catalog.tableExists(self.full_log_table_name):
                 print(
                     f"{self.__class__.__name__} - {self.full_log_table_name} does not exist. Creating it..."
                 )
                 log_table_df = self.spark.createDataFrame([], self.log_table_schema)
                 log_table_df.write.saveAsTable(self.full_log_table_name)
+
+            log_table_df = self.spark.table(self.full_log_table_name)
 
             processed_blobs_df = log_table_df.where(f"entity_name = '{entity_name}'").select(
                 F.explode_outer("source_blobs").alias("source_blob")
@@ -740,7 +739,8 @@ class CdmToDeltaIngestionJob(CdmBatchIngestionJob):
             self.environment.delta_destination_schema is not None
         ), "You must specify delta_destination_schema in your environment!"
 
-        self.spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+        # Suppressed in favor of MERGE WITH SCHEMA EVOLUTION
+        # self.spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
         self.spark.sql(f"CREATE SCHEMA IF NOT EXISTS {self.environment.delta_destination_schema}")
 
     def _copy_to_destination(
@@ -779,7 +779,7 @@ class CdmToDeltaIngestionJob(CdmBatchIngestionJob):
             src_table = f"{entity.name}_src"
             df.createOrReplaceTempView(src_table)
             self.spark.sql(
-                f"""MERGE INTO {dest_table} t
+                f"""MERGE WITH SCHEMA EVOLUTION INTO {dest_table} t
                     USING {src_table} s
                     ON t.Id = s.Id AND t.versionnumber = s.versionnumber
                     WHEN MATCHED THEN UPDATE SET *
