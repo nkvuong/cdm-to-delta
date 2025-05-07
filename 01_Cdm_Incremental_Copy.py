@@ -21,9 +21,7 @@ from cdm_to_delta.model import (
 from cdm_to_delta.jobs import CdmPartitionIncrementalCopyJob
 
 # Credentials
-tenant_id = "<service-principal-tenant-id>"
-client_id = "<service-principal-client-id>"
-client_secret = dbutils.secrets.get("oneenvkeys", "adls-app-key")
+service_credential_name = "service_credential_name"
 
 # Storage details
 account_name = "storage_account_name"
@@ -38,9 +36,7 @@ table_schema = "cdm_test_catalog.dest_schema"
 entities = ["account"]
 
 environment = Environment(
-    tenant_id=tenant_id,
-    client_id=client_id,
-    client_secret=client_secret,
+    service_credential_name=service_credential_name,
     source_account_name=account_name,
     source_container_name=source_container_name,
     target_account_name=account_name,

@@ -1,4 +1,3 @@
-from azure.identity import ClientSecretCredential
 from azure.core.credentials import AccessToken
 from azure.storage.blob import ContainerClient
 
@@ -39,9 +38,7 @@ class Environment(object):
     def __init__(
         self,
         *,
-        tenant_id: str,
-        client_id: str,
-        client_secret: str,
+        service_credential_name: str,
         source_account_name: str,
         source_container_name: str,
         target_account_name: str,
@@ -53,12 +50,8 @@ class Environment(object):
         delta_destination_schema: Optional[str] = None,
     ) -> None:
         """
-        :param tenant_id: str
-          The service principal tenant ID
-        :param client_id: str
-          The service principal client ID
-        :param client_secret: str
-          The service principal secret
+        :param service_credential_name: str
+          The name of the Unity Catalog Service Credential
         :param source_account_name: str
           The name of the Dataverse Link storage account
         :param source_container_name: str
@@ -78,7 +71,8 @@ class Environment(object):
         :param delta_destination_schema: str (optional)
           The destination schema for the Delta table ingestion job
         """
-        self.credential = ClientSecretCredential(tenant_id, client_id, client_secret)
+        self.credential = dbutils.credentials.getServiceCredentialsProvider(service_credential_name)
+
         self.source_container_client = ContainerClient(
             Environment.account_url(source_account_name),
             source_container_name,
