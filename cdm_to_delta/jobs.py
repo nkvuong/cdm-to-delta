@@ -104,7 +104,7 @@ class CdmPartitionIncrementalCopyJob(object):
         return partition_blobs_rows
 
     def select_blob_to_copy(
-        self, entities: List[CdmEntity], partition_blob_rows: List[Row]
+        self, entities: List[CdmEntity], partition_blob_rows: List[Row], prefix: str = ""
     ) -> List[ManagedBlobLogEntry]:
         """Build the list of details for the blobs that need to be copied:
         1. Extract the metadata from the blob state rows
@@ -133,15 +133,16 @@ class CdmPartitionIncrementalCopyJob(object):
 
         source_container_url = self.environment.source_container_client.url
         target_root_url = self.environment.target_path_url
-
         process_ts = datetime.now()
         log_entries_to_copy: List[ManagedBlobLogEntry] = list()
 
         for entity in entities:
             # Traverse the entity folder in the source container
-            for b in self.environment.source_container_client.walk_blobs(
-                name_starts_with=f"{entity.name}/", delimiter="/"
-            ):
+            blobs = self.environment.source_container_client.walk_blobs(
+                name_starts_with=f"{prefix}{entity.name}/", delimiter="/"
+            )
+            print(f'List is {blobs}')
+            for b in blobs:
                 if not isinstance(b, BlobProperties):
                     continue
 

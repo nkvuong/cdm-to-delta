@@ -20,34 +20,35 @@ from cdm_to_delta.model import (
 )
 from cdm_to_delta.jobs import CdmToDeltaIngestionJob, CdmToParquetIngestionJob  # noqa: F401
 
-# Credentials
-tenant_id = "<service-principal-tenant-id>"
-client_id = "<service-principal-client-id>"
-client_secret = dbutils.secrets.get("oneenvkeys", "adls-app-key")
+# Credentials - specify a Unity Catalog service credential here
+# https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/cloud-services/service-credentials#create-a-service-credential-using-a-managed-identity
+service_credential_name = "oneenv-service"
 
 # Storage details
-account_name = "storage_account_name"
-source_container_name = "dataflow-cdm"
-target_container_name = "dataflow-cdm"
+account_name = "cdmfiles"
+source_container_name = "cdm"
+target_container_name = "cdm"
 
-cdm_root_path = "/Volumes/main/default/vv_dataflow_cdm"
-parquet_destination_root_path = "/Volumes/main/default/vv_dataflow_cdm/_parquet_destination"
-log_schema = "cdm_test_catalog.default"
-table_schema = "cdm_test_catalog.dest_schema"
+# this is the path that contains the model.json and the entities folder with csv files
+cdm_root_path = "/Volumes/vuongnguyen/cdm/cdm/2024-10-24T14.49.38Z"
+incremental_csv_container_path = "/Volumes/vuongnguyen/cdm/cdm"
+
+# this is the target path where we will write the parquet files to
+parquet_destination_root_path = "/Volumes/vuongnguyen/cdm/cdm/parquet"
+log_schema = "vuongnguyen.cdm"
+table_schema = "vuongnguyen.cdm"
 
 entities = ["account"]
 
 environment = Environment(
-    tenant_id=tenant_id,
-    client_id=client_id,
-    client_secret=client_secret,
+    service_credential_name=service_credential_name,
     source_account_name=account_name,
     source_container_name=source_container_name,
     target_account_name=account_name,
     target_container_name=target_container_name,
     cdm_root_path=cdm_root_path,
     log_schema_name=log_schema,
-    incremental_csv_container_path=cdm_root_path,
+    incremental_csv_container_path=incremental_csv_container_path,
     parquet_destination_root_path=parquet_destination_root_path,
     delta_destination_schema=table_schema,
 )
@@ -60,8 +61,7 @@ manifest = CdmManifest(environment, entities)
 # COMMAND ----------
 
 # 2. Init job object
-ingestion_job = CdmToParquetIngestionJob(spark, environment)
-# ingestion_job = CdmToDeltaIngestionJob(spark, environment)
+ingestion_job = CdmToDeltaIngestionJob(spark, environment)
 
 # COMMAND ----------
 

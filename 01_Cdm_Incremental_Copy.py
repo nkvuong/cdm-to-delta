@@ -20,18 +20,25 @@ from cdm_to_delta.model import (
 )
 from cdm_to_delta.jobs import CdmPartitionIncrementalCopyJob
 
-# Credentials
-service_credential_name = "service_credential_name"
+# Credentials - specify a Unity Catalog service credential here
+# https://learn.microsoft.com/en-us/azure/databricks/connect/unity-catalog/cloud-services/service-credentials#create-a-service-credential-using-a-managed-identity
+service_credential_name = "oneenv-service"
 
 # Storage details
-account_name = "storage_account_name"
-source_container_name = "dataflow-cdm"
-target_container_name = "dataflow-cdm"
+account_name = "cdmfiles"
+source_container_name = "cdm"
+container_prefix = "2024-10-24T14.49.38Z/"
+target_container_name = "cdm"
 
-cdm_root_path = "/Volumes/main/default/vv_dataflow_cdm"
-parquet_destination_root_path = "/Volumes/main/default/vv_dataflow_cdm/_parquet_destination"
-log_schema = "cdm_test_catalog.default"
-table_schema = "cdm_test_catalog.dest_schema"
+# this is the path that contains the model.json and the entities folder with csv files
+cdm_root_path = "/Volumes/vuongnguyen/cdm/cdm/2024-10-24T14.49.38Z"
+
+incremental_csv_container_path = "/Volumes/vuongnguyen/cdm/cdm"
+
+# this is the target path where we will write the parquet files to
+parquet_destination_root_path = "/Volumes/vuongnguyen/cdm/cdm/parquet"
+log_schema = "vuongnguyen.cdm"
+table_schema = "vuongnguyen.cdm"
 
 entities = ["account"]
 
@@ -43,7 +50,7 @@ environment = Environment(
     target_container_name=target_container_name,
     cdm_root_path=cdm_root_path,
     log_schema_name=log_schema,
-    incremental_csv_container_path=cdm_root_path,
+    incremental_csv_container_path=incremental_csv_container_path,
 )
 
 # COMMAND ----------
@@ -56,7 +63,7 @@ manifest = CdmManifest(environment, entities)
 # 2. Extract blobs metadata
 copy_job = CdmPartitionIncrementalCopyJob(spark, environment)
 partition_blobs_rows = copy_job.fetch_blob_state_from_log(manifest.get_entities().values())
-log_entries_to_copy = copy_job.select_blob_to_copy(manifest.get_entities().values(), partition_blobs_rows)
+log_entries_to_copy = copy_job.select_blob_to_copy(manifest.get_entities().values(), partition_blobs_rows, container_prefix)
 print(f"Found {len(log_entries_to_copy)} blob to copy from")
 
 # COMMAND ----------
@@ -68,10 +75,6 @@ print(f"Found {len(log_entries_to_copy)} blob to copy from")
 
 # 3. Perform the copy operations
 log_entries = copy_job.copy_incremental_blobs(log_entries_to_copy)
-
-# COMMAND ----------
-
-log_entries
 
 # COMMAND ----------
 
